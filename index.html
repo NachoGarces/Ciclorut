@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>CicloRut - Estacionamiento inteligente</title>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
@@ -53,6 +53,13 @@
             padding: 1rem;
             margin: 15px 0 25px;
             display: none;
+        }
+        #qr-reader {
+            width: 100%;
+            min-height: 350px;
+            border-radius: 1rem;
+            overflow: hidden;
+            background: #000;
         }
         .candados-grid {
             display: grid;
@@ -121,6 +128,7 @@
         }
         button:active { transform: scale(0.96); }
         .btn-secondary { background: #5f7b6a; }
+        .btn-warning { background: #b85c1a; }
         .estado-texto {
             font-size: 0.8rem;
             font-weight: bold;
@@ -159,25 +167,28 @@
     </div>
     
     <div id="globalScannerArea" class="scanner-global">
-        <div id="qr-reader" style="width: 100%; border-radius: 1rem; overflow: hidden;"></div>
-        <button id="stopScanBtn" style="margin-top: 10px; background:#4f5e4a;">❌ Detener cámara</button>
+        <div id="qr-reader"></div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button id="stopScanBtn" style="background:#4f5e4a;">❌ Detener cámara</button>
+            <button id="restartCameraBtn" style="background:#2c6e3c;">🔄 Reiniciar cámara</button>
+        </div>
     </div>
 
     <div class="candados-grid" id="candadosGrid"></div>
 
     <div class="log-area" id="logPanel">
         📍 Historial:<br>
-        • Sistema listo.
+        • Sistema listo. Para usar la cámara, haz clic en "Escanear QR" en cualquier estacionamiento.
     </div>
     <div class="footer">
         📌 El QR debe contener: RUN, serial y MRZ.<br>
         Ej: <code>RUN=12345678-9&serial=987654321&mrz=ABC123...</code><br>
-        ✅ Para estacionar: escanea en espacio libre → cierra candado. Para retirar: escanea en tu espacio → se abre → cierra candado (se libera).
+        ✅ Si la cámara no se ve, presiona "Reiniciar cámara".
     </div>
 </div>
 
 <script>
-    // ---------- 6 ESTACIONAMIENTOS con flag pendingRelease ----------
+    // ---------- 6 ESTACIONAMIENTOS ----------
     let slots = [];
     let activeScanSlotId = null;
     let html5QrCode = null;
@@ -186,6 +197,7 @@
     const candadosGrid = document.getElementById('candadosGrid');
     const globalScannerDiv = document.getElementById('globalScannerArea');
     const stopScanBtn = document.getElementById('stopScanBtn');
+    const restartCameraBtn = document.getElementById('restartCameraBtn');
     const logPanel = document.getElementById('logPanel');
     const globalMessagesDiv = document.getElementById('globalMessages');
 
@@ -207,7 +219,7 @@
         p.style.margin = '4px 0';
         logPanel.appendChild(p);
         logPanel.scrollTop = logPanel.scrollHeight;
-        while (logPanel.children.length > 30) logPanel.removeChild(logPanel.firstChild);
+        while (logPanel.children.length > 30) logPanel.removeChild(logPanel.lastChild);
     }
 
     function parseQRData(qrText) {
@@ -277,7 +289,7 @@
                 id: i,
                 owner: null,
                 isLocked: true,
-                pendingRelease: false  // nuevo flag: true cuando el dueño escaneó para retirar
+                pendingRelease: false
             });
         }
         persistSlots();
@@ -339,7 +351,6 @@
         });
     }
 
-    // Cierre manual: decide si solo cerrar (estacionar) o liberar (retirar) según flag pendingRelease
     function closeLockManually(slotId) {
         const slot = slots[slotId];
         if (slot.owner === null) {
@@ -349,14 +360,12 @@
         }
         if (!slot.isLocked) {
             if (slot.pendingRelease) {
-                // Modo retiro: liberar espacio
                 slot.owner = null;
                 slot.isLocked = true;
                 slot.pendingRelease = false;
                 setGlobalMessage(`✅ Estacionamiento ${slotId+1} liberado. ¡Gracias por usar CicloRut!`);
                 addLog(`Estacionamiento ${slotId+1}: liberado tras cerrar (retiro completado).`);
             } else {
-                // Modo estacionamiento: solo cerrar, mantener dueño
                 slot.isLocked = true;
                 setGlobalMessage(`🔒 Estacionamiento ${slotId+1} asegurado. ¡Bicicleta guardada!`);
                 addLog(`Estacionamiento ${slotId+1}: candado cerrado, espacio ocupado.`);
@@ -380,11 +389,10 @@
         
         const slot = slots[slotId];
         
-        // Caso 1: Espacio libre
         if (slot.owner === null) {
             slot.owner = { ...extracted };
             slot.isLocked = false;
-            slot.pendingRelease = false;  // modo estacionamiento
+            slot.pendingRelease = false;
             setGlobalMessage(`🔓 Estacionamiento ${slotId+1} abierto. Engancha tu bici y presiona "Cerrar candado".`);
             addLog(`Nuevo dueño asignado. Candado ABIERTO (modo estacionamiento).`);
             persistSlots();
@@ -392,14 +400,12 @@
             return true;
         }
         
-        // Caso 2: Ocupado
         const isOwner = isSameOwner(slot.owner, extracted);
         if (isOwner) {
             if (slot.isLocked) {
-                // Dueño quiere retirar: abrir y marcar pendingRelease
                 slot.isLocked = false;
                 slot.pendingRelease = true;
-                setGlobalMessage(`🔓 Estacionamiento ${slotId+1} abierto. Retira tu bicicleta y presiona "Cerrar candado" para liberar el espacio.`);
+                setGlobalMessage(`🔓 Estacionamiento ${slotId+1} abierto. Retira tu bicicleta y presiona "Cerrar candado" para liberar.`);
                 addLog(`Dueño verificó QR. Candado ABIERTO (modo retiro).`);
                 persistSlots();
                 renderAllCards();
@@ -416,8 +422,7 @@
 
     async function startScannerForSlot(slotId) {
         if (isScanning) {
-            setGlobalMessage(`Ya hay un escaneo activo. Deténlo primero.`, true);
-            return;
+            await stopScanner();
         }
         activeScanSlotId = slotId;
         globalScannerDiv.style.display = 'block';
@@ -426,43 +431,63 @@
         const qrReaderDiv = document.getElementById('qr-reader');
         qrReaderDiv.innerHTML = '';
         html5QrCode = new Html5Qrcode("qr-reader");
+        
         try {
             await html5QrCode.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 280, height: 280 }, aspectRatio: 1.0 },
+                {
+                    fps: 10,
+                    qrbox: { width: 300, height: 300 },
+                    aspectRatio: 1.0
+                },
                 (decodedText) => {
                     processQRForSlot(decodedText, activeScanSlotId);
                     stopScanner();
                 },
-                (errorMessage) => { /* ignorar */ }
+                (errorMessage) => {
+                    // Solo mostrar errores críticos
+                    if (errorMessage.includes("No MultiFormat Readers")) return;
+                    console.log(errorMessage);
+                }
             );
             isScanning = true;
-            setGlobalMessage(`📷 Escaneando para Estacionamiento ${slotId+1} - Enfoca el QR del carnet`);
-            addLog(`Cámara activa para Estacionamiento ${slotId+1}.`);
+            setGlobalMessage(`📷 Cámara activa - Escaneando para Estacionamiento ${slotId+1}`);
+            addLog(`Cámara iniciada correctamente.`);
         } catch(err) {
-            setGlobalMessage(`Error al acceder a la cámara: ${err}`, true);
+            setGlobalMessage(`Error: ${err}`, true);
+            addLog(`Error al iniciar cámara: ${err}`, true);
             globalScannerDiv.style.display = 'none';
             isScanning = false;
         }
     }
 
-    function stopScanner() {
+    async function stopScanner() {
         if (html5QrCode && isScanning) {
-            html5QrCode.stop().then(() => {
-                isScanning = false;
-                globalScannerDiv.style.display = 'none';
-                activeScanSlotId = null;
-                setGlobalMessage(`Escáner detenido`);
-                addLog(`Cámara detenida.`);
-            }).catch(e => addLog(`Error al detener: ${e}`, true));
-        } else {
-            globalScannerDiv.style.display = 'none';
+            try {
+                await html5QrCode.stop();
+            } catch(e) {}
             isScanning = false;
-            activeScanSlotId = null;
+        }
+        globalScannerDiv.style.display = 'none';
+        activeScanSlotId = null;
+        setGlobalMessage(`Escáner detenido`);
+        addLog(`Cámara detenida.`);
+    }
+
+    async function restartCamera() {
+        if (activeScanSlotId !== null) {
+            await stopScanner();
+            setTimeout(() => {
+                startScannerForSlot(activeScanSlotId);
+            }, 500);
+        } else {
+            setGlobalMessage(`Primero selecciona un estacionamiento para escanear`, true);
         }
     }
 
     stopScanBtn.addEventListener('click', stopScanner);
+    restartCameraBtn.addEventListener('click', restartCamera);
+    
     loadSlots();
 </script>
 </body>
