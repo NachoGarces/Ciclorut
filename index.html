@@ -182,7 +182,7 @@
     </div>
     <div class="footer">
         📌 El QR debe contener: RUN, serial y MRZ.<br>
-        v2.3
+        v2.3.1
     </div>
 </div>
 
@@ -451,23 +451,25 @@
             setGlobalMessage(`📷 Cámara activa - Escaneando para Estacionamiento ${slotId+1}`);
             addLog(`Cámara iniciada correctamente.`);
 // ── ZOOM AUTOMÁTICO ──
+            // ── ZOOM AUTOMÁTICO ──
             try {
-                const track = html5QrCode._mediaStream?.getVideoTracks()[0];
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                const track = stream.getVideoTracks()[0];
                 if (track) {
                     const capabilities = track.getCapabilities();
+                    addLog(`Capacidades: ${JSON.stringify(capabilities).substring(0,80)}`);
                     if (capabilities.zoom) {
-                        const minZoom = capabilities.zoom.min;
-                        const maxZoom = capabilities.zoom.max;
-                        const targetZoom = Math.min(minZoom * 3, maxZoom); // zoom 2.5x
-                        await track.applyConstraints({ advanced: [{ zoom: targetZoom }] });
-                        addLog(`Zoom aplicado: ${targetZoom.toFixed(1)}x`);
+                         const targetZoom = Math.min(capabilities.zoom.min * 3, capabilities.zoom.max);
+                         await track.applyConstraints({ advanced: [{ zoom: targetZoom }] });
+                         addLog(`Zoom aplicado: ${targetZoom.toFixed(1)}x`);
                     } else {
-                        addLog(`Este dispositivo no soporta zoom por API.`);
+                         addLog(`Sin soporte de zoom en este dispositivo.`);
                     }
                 }
-                } catch(e) {
-                    addLog(`Zoom no disponible: ${e.message}`);
-                }
+            } catch(e) {
+                addLog(`Zoom no disponible: ${e.message}`);
+            }
             //  zoom
         } catch(err) {
             setGlobalMessage(`Error: ${err}`, true);
