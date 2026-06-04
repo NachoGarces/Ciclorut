@@ -451,6 +451,25 @@
             isScanning = true;
             setGlobalMessage(`📷 Cámara activa - Escaneando para Estacionamiento ${slotId+1}`);
             addLog(`Cámara iniciada correctamente.`);
+// ── ZOOM AUTOMÁTICO ──
+try {
+    const track = html5QrCode._mediaStream?.getVideoTracks()[0];
+    if (track) {
+        const capabilities = track.getCapabilities();
+        if (capabilities.zoom) {
+            const minZoom = capabilities.zoom.min;
+            const maxZoom = capabilities.zoom.max;
+            const targetZoom = Math.min(minZoom * 2.5, maxZoom); // zoom 2.5x
+            await track.applyConstraints({ advanced: [{ zoom: targetZoom }] });
+            addLog(`Zoom aplicado: ${targetZoom.toFixed(1)}x`);
+        } else {
+            addLog(`Este dispositivo no soporta zoom por API.`);
+        }
+    }
+} catch(e) {
+    addLog(`Zoom no disponible: ${e.message}`);
+}
+            // fin zoom
         } catch(err) {
             setGlobalMessage(`Error: ${err}`, true);
             addLog(`Error al iniciar cámara: ${err}`, true);
