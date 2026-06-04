@@ -180,9 +180,12 @@
         📍 Historial:<br>
         • Sistema listo. Para usar la cámara, haz clic en "Escanear QR" en cualquier estacionamiento.
     </div>
+    <div style="text-align:center; margin-top: 1rem;">
+        <button class="btn-warning" onclick="resetearTodo()">🗑️ Borrar todos los datos</button>
+    </div>
     <div class="footer">
         📌 El QR debe contener: RUN, serial y MRZ.<br>
-        v2.3.1
+        v2.4.0
     </div>
 </div>
 
@@ -505,6 +508,16 @@
 
     stopScanBtn.addEventListener('click', stopScanner);
     restartCameraBtn.addEventListener('click', restartCamera);
+
+    function resetearTodo() {
+        if (confirm('¿Seguro? Se borrarán todos los estacionamientos y datos guardados.')) {
+            localStorage.clear();
+            initDefaultSlots();
+            renderAllCards();
+            addLog('Todos los datos eliminados.');
+            setGlobalMessage('🗑️ Datos borrados. Sistema reiniciado.');
+        }
+    }
     
     loadSlots();
 </script>
