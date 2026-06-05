@@ -326,5 +326,22 @@
             setGlobalMessage('🗑️ Datos borrados. Sistema reiniciado.');
         }
     }
+    // ── INPUT TECLADO (app celular) ──
+    const qrHiddenInput = document.getElementById('qrHiddenInput');
+
+    document.addEventListener('click', () => qrHiddenInput.focus());
+
+    qrHiddenInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const texto = qrHiddenInput.value.trim();
+            qrHiddenInput.value = '';
+            if (!texto) return;
+            if (activeScanSlotId === null) {
+                setGlobalMessage('Primero haz clic en "Escanear QR" de un estacionamiento', true);
+                return;
+            }
+            processQRForSlot(texto, activeScanSlotId);
+        }
+    });
     
     loadSlots();
