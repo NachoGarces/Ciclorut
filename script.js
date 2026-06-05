@@ -141,16 +141,21 @@
                 <div class="owner-info">👤 ${ownerDisplay}</div>
                 <div class="acciones">
                     <button class="scan-btn" data-id="${i}">📷 Escanear QR</button>
+                    <button class="phone-btn btn-secondary" data-id="${i}">Inalambrico</button>
                     ${!slot.isLocked && hasOwner ? `<button class="close-btn btn-secondary" data-id="${i}">🔒 Cerrar candado</button>` : ''}
                 </div>
             `;
             candadosGrid.appendChild(card);
         }
         
-        document.querySelectorAll('.scan-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.phone-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
                 const id = parseInt(btn.dataset.id);
-                startScannerForSlot(id);
+                activeScanSlotId = id;
+                if (isScanning) stopScanner();
+                setGlobalMessage(`📱 Listo para escanear con celular — Estacionamiento ${id+1}`);
+                addLog(`Modo celular activado para Estacionamiento ${id+1}`);
+                document.getElementById('qrHiddenInput').focus();
             });
         });
         document.querySelectorAll('.close-btn').forEach(btn => {
@@ -326,18 +331,15 @@
             setGlobalMessage('🗑️ Datos borrados. Sistema reiniciado.');
         }
     }
-    // ── INPUT TECLADO (app celular) ──
+
     const qrHiddenInput = document.getElementById('qrHiddenInput');
-
-    document.addEventListener('click', () => qrHiddenInput.focus());
-
     qrHiddenInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             const texto = qrHiddenInput.value.trim();
             qrHiddenInput.value = '';
             if (!texto) return;
             if (activeScanSlotId === null) {
-                setGlobalMessage('Primero haz clic en "Escanear QR" de un estacionamiento', true);
+                setGlobalMessage('⚠️ Primero selecciona un estacionamiento', true);
                 return;
             }
             processQRForSlot(texto, activeScanSlotId);
