@@ -1,183 +1,4 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>CicloRut - Estacionamiento inteligente</title>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <style>
-        * {
-            box-sizing: border-box;
-            font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif;
-        }
-        body {
-            background: #dce8d4;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-        .container {
-            max-width: 1300px;
-            width: 100%;
-            background: white;
-            border-radius: 2rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            padding: 1.5rem;
-        }
-        h1 {
-            font-size: 2.2rem;
-            margin: 0 0 0.25rem;
-            color: #1e4620;
-            text-align: center;
-        }
-        .messages-area {
-            text-align: center;
-            margin: 0 0 20px 0;
-            min-height: 70px;
-        }
-        .sub-message {
-            text-align: center;
-            font-size: 1rem;
-            background: #eef4ea;
-            padding: 8px 16px;
-            border-radius: 40px;
-            margin: 8px auto;
-            display: inline-block;
-            max-width: 90%;
-            font-weight: 500;
-        }
-        .scanner-global {
-            background: #1e2a1a;
-            border-radius: 2rem;
-            padding: 1rem;
-            margin: 15px 0 25px;
-            display: none;
-        }
-        .candados-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 1.5rem;
-            margin: 1.5rem 0;
-        }
-        .candado-card {
-            border-radius: 1.5rem;
-            padding: 1rem;
-            transition: 0.2s;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border: 1px solid rgba(0,0,0,0.1);
-        }
-        .card-available { background-color: #d0e7c0; }
-        .card-occupied { background-color: #f4cccc; }
-        .card-open { background-color: #fff2cc; }
-        
-        .candado-header {
-            font-size: 1.4rem;
-            font-weight: bold;
-            background: rgba(255,255,255,0.7);
-            border-radius: 2rem;
-            padding: 0.3rem 0.8rem;
-            display: inline-block;
-            margin-bottom: 1rem;
-        }
-        .iconos {
-            font-size: 3rem;
-            text-align: center;
-            margin: 0.5rem 0;
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            align-items: center;
-        }
-        .lock-icon { font-size: 2.8rem; }
-        .bike-icon { font-size: 2.5rem; opacity: 0.9; }
-        .owner-info {
-            background: rgba(255,255,255,0.8);
-            border-radius: 1rem;
-            padding: 0.5rem;
-            font-size: 0.7rem;
-            font-family: monospace;
-            word-break: break-all;
-            margin: 0.5rem 0;
-            border: 1px solid #ccc;
-        }
-        .acciones {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 0.8rem;
-            justify-content: center;
-        }
-        button {
-            background: #2c6e3c;
-            border: none;
-            color: white;
-            font-weight: 600;
-            padding: 0.5rem 1rem;
-            border-radius: 2rem;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: 0.1s;
-        }
-        button:active { transform: scale(0.96); }
-        .btn-secondary { background: #5f7b6a; }
-        .estado-texto {
-            font-size: 0.8rem;
-            font-weight: bold;
-            text-align: center;
-            margin-top: 0.5rem;
-        }
-        .log-area {
-            background: #f1f3ef;
-            border-radius: 1.5rem;
-            padding: 0.8rem;
-            font-size: 0.75rem;
-            max-height: 150px;
-            overflow-y: auto;
-            margin-top: 1rem;
-            font-family: monospace;
-        }
-        .footer {
-            font-size: 0.7rem;
-            text-align: center;
-            margin-top: 1rem;
-            color: #5f6b55;
-        }
-        @media (max-width: 700px) {
-            .candados-grid { grid-template-columns: 1fr 1fr; }
-        }
-        @media (max-width: 500px) {
-            .candados-grid { grid-template-columns: 1fr; }
-        }
-    </style>
-</head>
-<body>
-<div class="container">
-    <h1>🚲 CicloRut</h1>
-    <div class="messages-area" id="globalMessages">
-        <div class="sub-message">✨ Escanea tu carnet para empezar</div>
-    </div>
-    
-    <div id="globalScannerArea" class="scanner-global">
-        <div id="qr-reader" style="width: 100%; border-radius: 1rem; overflow: hidden;"></div>
-        <button id="stopScanBtn" style="margin-top: 10px; background:#4f5e4a;">❌ Detener cámara</button>
-    </div>
-
-    <div class="candados-grid" id="candadosGrid"></div>
-
-    <div class="log-area" id="logPanel">
-        📍 Historial:<br>
-        • Sistema listo.
-    </div>
-    <div class="footer">
-        📌 El QR debe contener: RUN, serial y MRZ.<br>
-        Ej: <code>RUN=12345678-9&serial=987654321&mrz=ABC123...</code><br>
-        ✅ Para estacionar: escanea en espacio libre → cierra candado. Para retirar: escanea en tu espacio → se abre → cierra candado (se libera).
-    </div>
-</div>
-
-<script>
-    // ---------- 6 ESTACIONAMIENTOS con flag pendingRelease ----------
+// ---------- 6 ESTACIONAMIENTOS ----------
     let slots = [];
     let activeScanSlotId = null;
     let html5QrCode = null;
@@ -186,6 +7,7 @@
     const candadosGrid = document.getElementById('candadosGrid');
     const globalScannerDiv = document.getElementById('globalScannerArea');
     const stopScanBtn = document.getElementById('stopScanBtn');
+    const restartCameraBtn = document.getElementById('restartCameraBtn');
     const logPanel = document.getElementById('logPanel');
     const globalMessagesDiv = document.getElementById('globalMessages');
 
@@ -207,7 +29,7 @@
         p.style.margin = '4px 0';
         logPanel.appendChild(p);
         logPanel.scrollTop = logPanel.scrollHeight;
-        while (logPanel.children.length > 30) logPanel.removeChild(logPanel.firstChild);
+        while (logPanel.children.length > 30) logPanel.removeChild(logPanel.lastChild);
     }
 
     function parseQRData(qrText) {
@@ -277,7 +99,7 @@
                 id: i,
                 owner: null,
                 isLocked: true,
-                pendingRelease: false  // nuevo flag: true cuando el dueño escaneó para retirar
+                pendingRelease: false
             });
         }
         persistSlots();
@@ -339,7 +161,6 @@
         });
     }
 
-    // Cierre manual: decide si solo cerrar (estacionar) o liberar (retirar) según flag pendingRelease
     function closeLockManually(slotId) {
         const slot = slots[slotId];
         if (slot.owner === null) {
@@ -349,14 +170,12 @@
         }
         if (!slot.isLocked) {
             if (slot.pendingRelease) {
-                // Modo retiro: liberar espacio
                 slot.owner = null;
                 slot.isLocked = true;
                 slot.pendingRelease = false;
                 setGlobalMessage(`✅ Estacionamiento ${slotId+1} liberado. ¡Gracias por usar CicloRut!`);
                 addLog(`Estacionamiento ${slotId+1}: liberado tras cerrar (retiro completado).`);
             } else {
-                // Modo estacionamiento: solo cerrar, mantener dueño
                 slot.isLocked = true;
                 setGlobalMessage(`🔒 Estacionamiento ${slotId+1} asegurado. ¡Bicicleta guardada!`);
                 addLog(`Estacionamiento ${slotId+1}: candado cerrado, espacio ocupado.`);
@@ -364,7 +183,7 @@
             persistSlots();
             renderAllCards();
         } else {
-            setGlobalMessage(`ℹ️ El candado ya estaba cerrado.`, true);
+            setGlobalMessage(`El candado ya estaba cerrado.`, true);
         }
     }
 
@@ -380,35 +199,32 @@
         
         const slot = slots[slotId];
         
-        // Caso 1: Espacio libre
         if (slot.owner === null) {
             slot.owner = { ...extracted };
             slot.isLocked = false;
-            slot.pendingRelease = false;  // modo estacionamiento
-            setGlobalMessage(`🔓 Estacionamiento ${slotId+1} abierto. Engancha tu bici y presiona "Cerrar candado".`);
+            slot.pendingRelease = false;
+            setGlobalMessage(`Estacionamiento ${slotId+1} abierto. Engancha tu bici y presiona "Cerrar candado".`);
             addLog(`Nuevo dueño asignado. Candado ABIERTO (modo estacionamiento).`);
             persistSlots();
             renderAllCards();
             return true;
         }
         
-        // Caso 2: Ocupado
         const isOwner = isSameOwner(slot.owner, extracted);
         if (isOwner) {
             if (slot.isLocked) {
-                // Dueño quiere retirar: abrir y marcar pendingRelease
                 slot.isLocked = false;
                 slot.pendingRelease = true;
-                setGlobalMessage(`🔓 Estacionamiento ${slotId+1} abierto. Retira tu bicicleta y presiona "Cerrar candado" para liberar el espacio.`);
+                setGlobalMessage(`Estacionamiento ${slotId+1} abierto. Retira tu bicicleta y presiona "Cerrar candado" para liberar.`);
                 addLog(`Dueño verificó QR. Candado ABIERTO (modo retiro).`);
                 persistSlots();
                 renderAllCards();
             } else {
-                setGlobalMessage(`ℹ️ El candado ya está abierto. Si ya retiraste, presiona "Cerrar candado".`);
+                setGlobalMessage(`El candado ya está abierto. Si ya retiraste, presiona "Cerrar candado".`);
             }
             return true;
         } else {
-            setGlobalMessage(`⛔ Acceso denegado - Estacionamiento ${slotId+1} pertenece a otro usuario`, true);
+            setGlobalMessage(`Acceso denegado - Estacionamiento ${slotId+1} pertenece a otro usuario`, true);
             addLog(`Acceso denegado: el QR no corresponde al dueño (${slot.owner.rut}).`, true);
             return false;
         }
@@ -416,54 +232,99 @@
 
     async function startScannerForSlot(slotId) {
         if (isScanning) {
-            setGlobalMessage(`Ya hay un escaneo activo. Deténlo primero.`, true);
-            return;
+            await stopScanner();
         }
         activeScanSlotId = slotId;
         globalScannerDiv.style.display = 'block';
         globalScannerDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
         
         const qrReaderDiv = document.getElementById('qr-reader');
-        qrReaderDiv.innerHTML = '';
         html5QrCode = new Html5Qrcode("qr-reader");
+        
         try {
             await html5QrCode.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 280, height: 280 }, aspectRatio: 1.0 },
+                {
+                    fps: 10,
+                    qrbox: { width: 300, height: 300 },
+                },
                 (decodedText) => {
                     processQRForSlot(decodedText, activeScanSlotId);
                     stopScanner();
                 },
-                (errorMessage) => { /* ignorar */ }
+                (errorMessage) => {
+                    // Solo mostrar errores críticos
+                    if (errorMessage.includes("No MultiFormat Readers")) return;
+                    console.log(errorMessage);
+                }
             );
             isScanning = true;
-            setGlobalMessage(`📷 Escaneando para Estacionamiento ${slotId+1} - Enfoca el QR del carnet`);
-            addLog(`Cámara activa para Estacionamiento ${slotId+1}.`);
+            setGlobalMessage(`Cámara activa - Escaneando para Estacionamiento ${slotId+1}`);
+            addLog(`Cámara iniciada correctamente.`);
+
+            // ── ZOOM AUTOMÁTICO ──
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                const track = stream.getVideoTracks()[0];
+                if (track) {
+                    const capabilities = track.getCapabilities();
+                    addLog(`Capacidades: ${JSON.stringify(capabilities).substring(0,80)}`);
+                    if (capabilities.zoom) {
+                         const targetZoom = Math.min(capabilities.zoom.min * 3, capabilities.zoom.max);
+                         await track.applyConstraints({ advanced: [{ zoom: targetZoom }] });
+                         addLog(`Zoom aplicado: ${targetZoom.toFixed(1)}x`);
+                    } else {
+                         addLog(`Sin soporte de zoom en este dispositivo.`);
+                    }
+                }
+            } catch(e) {
+                addLog(`Zoom no disponible: ${e.message}`);
+            }
+            //  zoom
         } catch(err) {
-            setGlobalMessage(`Error al acceder a la cámara: ${err}`, true);
+            setGlobalMessage(`Error: ${err}`, true);
+            addLog(`Error al iniciar cámara: ${err}`, true);
             globalScannerDiv.style.display = 'none';
             isScanning = false;
         }
     }
 
-    function stopScanner() {
+    async function stopScanner() {
         if (html5QrCode && isScanning) {
-            html5QrCode.stop().then(() => {
-                isScanning = false;
-                globalScannerDiv.style.display = 'none';
-                activeScanSlotId = null;
-                setGlobalMessage(`Escáner detenido`);
-                addLog(`Cámara detenida.`);
-            }).catch(e => addLog(`Error al detener: ${e}`, true));
-        } else {
-            globalScannerDiv.style.display = 'none';
+            try {
+                await html5QrCode.stop();
+            } catch(e) {}
             isScanning = false;
-            activeScanSlotId = null;
+        }
+        globalScannerDiv.style.display = 'none';
+        activeScanSlotId = null;
+        setGlobalMessage(`Escáner detenido`);
+        addLog(`Cámara detenida.`);
+    }
+
+    async function restartCamera() {
+        if (activeScanSlotId !== null) {
+            await stopScanner();
+            setTimeout(() => {
+                startScannerForSlot(activeScanSlotId);
+            }, 500);
+        } else {
+            setGlobalMessage(`Primero selecciona un estacionamiento para escanear`, true);
         }
     }
 
     stopScanBtn.addEventListener('click', stopScanner);
+    restartCameraBtn.addEventListener('click', restartCamera);
+
+    function resetearTodo() {
+        if (confirm('¿Seguro? Se borrarán todos los estacionamientos y datos guardados.')) {
+            localStorage.clear();
+            initDefaultSlots();
+            renderAllCards();
+            addLog('Todos los datos eliminados.');
+            setGlobalMessage('🗑️ Datos borrados. Sistema reiniciado.');
+        }
+    }
+    
     loadSlots();
-</script>
-</body>
-</html>
